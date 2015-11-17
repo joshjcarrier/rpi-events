@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+
+require 'azure'
+require 'thor'
+
+module Events
+  class Daemon < Thor
+    package_name "Events"
+
+    desc "start", "Starts the Events daemon."
+    def start
+puts 'hi'
+    end
+  end
+end
+
+Events::Daemon.start
