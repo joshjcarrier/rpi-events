@@ -12,4 +12,4 @@ RUN bundle install
 # rails
 ADD . /opt/events
 WORKDIR /opt/events
-CMD ["ruby","bin/events", "start"]
+ENTRYPOINT ["ruby","bin/events", "start"]
