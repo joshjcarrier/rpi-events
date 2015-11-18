@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'azure'
+require 'base64'
 require 'thor'
 
 module Events
@@ -8,11 +9,31 @@ module Events
     package_name "Events"
 
     desc "start", "Starts the Events daemon."
-    method_option :azure_servicebus_namespace, :description => "Azure Service Bus Namespace", :default => ENV['AZURE_SERVICEBUS_NAMESPACE']
-    method_option :azure_servicebus_access_key, :description => "Azure Service Bus Access Key", :default => ENV['AZURE_SERVICEBUS_ACCESS_KEY']
-    method_option :azure_servicebus_issuer, :description => "Azure Service Bus Issuer", :default => ENV['AZURE_SERVICEBUS_ISSUER']
+    method_option :azure_sb_namespace, :description => "Azure Service Bus Namespace", :default => ENV['AZURE_SERVICEBUS_NAMESPACE']
+    method_option :azure_sb_sas_key_name, :description => "Azure Service Bus Shared Access Key Name", :default => ENV['AZURE_SERVICEBUS_SAS_KEY_NAME']
+    method_option :azure_sb_sas_key, :description => "Azure Service Bus Shared Access Key", :default => ENV['AZURE_SERVICEBUS_SAS_KEY']
     def start
-puts options.to_s
+      Azure.sb_namespace      = options[:azure_sb_namespace]
+      Azure.sb_sas_key_name   = options[:azure_sb_sas_key_name]
+      Azure.sb_sas_key        = Base64.strict_encode64 options[:azure_sb_sas_key]
+
+      # Create an azure service bus object
+      service_bus = Azure::ServiceBus::ServiceBusService.new(Azure.service_bus_host, {:signer=>Azure::ServiceBus::Auth::SharedAccessSigner.new})
+
+      # Send a queue message with just the message body
+      service_bus.send_queue_message("device-rx", "test queue message")
+
+      loop do
+        puts 'rx waiting for message...'
+
+        # Receive a queue message
+        message = service_bus.receive_queue_message("device-rx")
+
+        puts "rx: received '#{message.body.to_s}'"
+
+        # mark message complete
+        service_bus.delete_queue_message(message)
+      end
     end
   end
 end
